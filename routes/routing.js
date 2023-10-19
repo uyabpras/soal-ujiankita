@@ -1,13 +1,17 @@
-// const express = require('express');
+const express = require('express');
+const soalController = require('../controller/soalController');
+
+const router = express.Router();
+router.post('/', soalController.create);
+router.get('/', soalController.list);
+router.get('/:id', soalController.findID);
+router.put('/:id', soalController.update);
+router.delete('/:id', soalController.delete);
+module.exports = router;
+
 // const soalController = require('../controller/soalController');
-
-// const router = express.Router();
-// router.post('/api/create', soalController.create);
-// module.exports = router;
-
-module.exports = app => {
-    const soalController = require('../controller/soalController');
-    var router = require('express').Router();  
+// module.exports = router=> {
     
-    router.post('/api/create', soalController.create);
-}
+//     var router = require('express').Router();  
+//     router.post('/create', soalController.create);
+// }

@@ -20,23 +20,23 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true,
         },
-        multipel1:{
+        multiple1:{
             type: DataTypes.STRING,
             allowNull: false,
         },
-        multipel2:{
+        multiple2:{
             type: DataTypes.STRING,
             allowNull: false,
         },
-        multipel3:{
+        multiple3:{
             type: DataTypes.STRING,
             allowNull: false,
         },
-        multipel4:{
+        multiple4:{
             type: DataTypes.STRING,
             allowNull: false,
         },
-        multipel5:{
+        multiple5:{
             type: DataTypes.STRING,
             allowNull: false,
         },

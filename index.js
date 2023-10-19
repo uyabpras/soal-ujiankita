@@ -1,15 +1,17 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const swaggerSpec = require('./swagger');
 const swaggerUi = require('swagger-ui-express');
 const app = express();
-const routing = require('./routes/routing');
+const soalRoute = require('./routes/routing');
 
 app.use(express.json());
 const port = 5000;
 
 app.use(bodyParser.json());
-// app.use('/api/soal', routing);
+app.use(cors());
+app.use('/api/soal', soalRoute);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
@@ -25,7 +27,7 @@ db.sequelize.sync({alter: true})
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
-require('./routes/routing')(app)
+// require('./routes/routing')(app)
 
 app.listen(port, () => {
   console.log(`Example app listening on port localhost:${port}/api-docs`);
