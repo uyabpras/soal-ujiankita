@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: false,
         },
-        kategori:{
+        category:{
             type: DataTypes.STRING,
         },
         deskripsi_soal1:{

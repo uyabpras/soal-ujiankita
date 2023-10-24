@@ -7,6 +7,7 @@ router.get('/', soalController.list);
 router.get('/:id', soalController.findID);
 router.put('/:id', soalController.update);
 router.delete('/:id', soalController.delete);
+router.post('/score', soalController.score);
 module.exports = router;
 
 // const soalController = require('../controller/soalController');

@@ -434,3 +434,62 @@ exports.delete = async (req, res) => {
       });
     }
   };
+
+  exports.score = async (req, res) => {
+    try {
+        const {answer} = req.body;
+        /*
+        const answer = [
+                        { id_soal: 1, correct_answer: 'A' },
+                        { id_soal: 2, correct_answer: 'B' },
+                        { id_soal: 3, correct_answer: 'C' },
+                        { id_soal: 4, correct_answer: 'A' },
+                        { id_soal: 5, correct_answer: 'B' }
+                    ];
+         */
+        
+        const total = {
+            score: 0,
+            category: []
+        };
+
+        await Promise.all(answer.map(async (obj) => {
+            const checksoal = await SoalDB.findByPk(obj.id_soal);
+            if (checksoal.correct_answer === obj.correct_answer) {
+              total.score += 1;
+            } else {
+              total.category.push(checksoal.category);
+            }
+          }));
+
+          if (total.category != []){
+            const count = total.category.reduce((name, sum) => {
+                name[sum] = (name[sum] || 0) + 1;
+            }, {});
+            total.count = count;
+        }
+
+          /* console.log(total);
+                    {
+                        score: 2,
+                        category: ['Math', 'Science'],
+                        count: { Math: 1, Science: 1 }
+                    }
+
+          */
+
+        res.status(200).send({
+            success: true,
+            data: total,
+            message: "successfull calculation score"
+        });
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            result: null,
+            message: "Oops there is an Error",
+          });
+    }
+  };
+
+  
