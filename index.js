@@ -14,7 +14,6 @@ app.use(cors());
 app.use('/api/soal', soalRoute);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-
 const db = require('./db/connect');
 db.sequelize.sync({alter: true})
   .then(() => {

@@ -371,7 +371,7 @@ exports.update = async (req, res) =>{
                 message: "soal not found by id:" + req.params.id
             });
         }
-        let updateSoal = {
+        const updateSoal = {
             mata_pelajaran: req.body.mata_pelajaran,
             kategori: req.body.kategori,
             deskripsi_soal1: req.body.deskripsi_soal1,
@@ -440,17 +440,22 @@ exports.delete = async (req, res) => {
         const {answer} = req.body;
         /*
         const answer = [
-                        { id_soal: 1, correct_answer: 'A' },
-                        { id_soal: 2, correct_answer: 'B' },
-                        { id_soal: 3, correct_answer: 'C' },
-                        { id_soal: 4, correct_answer: 'A' },
-                        { id_soal: 5, correct_answer: 'B' }
+                        { no_soal: 1, id_soal: 10, correct_answer: 'A' },
+                        { no_soal: 2, id_soal: 21, correct_answer: 'B' },
+                        { no_soal: 3, id_soal: 34, correct_answer: 'C' },
+                        { no_soal: 4, id_soal: 14, correct_answer: 'A' },
+                        { no_soal: 5, id_soal: 15, correct_answer: 'B' }
                     ];
          */
         
         const total = {
             score: 0,
-            category: []
+            data: {
+                numberWrongs: [],
+                category: [],
+                count: {},
+            }
+            
         };
 
         await Promise.all(answer.map(async (obj) => {
@@ -458,22 +463,38 @@ exports.delete = async (req, res) => {
             if (checksoal.correct_answer === obj.correct_answer) {
               total.score += 1;
             } else {
-              total.category.push(checksoal.category);
+                let numWrongs = {
+                    number : obj.no_soal,
+                    idSoal : obj.id_soal
+                }
+                total.data.numberWrongs.push(numWrongs);
+                total.data.category.push(checksoal.category);
             }
           }));
 
-          if (total.category != []){
-            const count = total.category.reduce((name, sum) => {
+          if (total.data.category > 0){
+            const count = total.data.category.reduce((name, sum) => {
                 name[sum] = (name[sum] || 0) + 1;
             }, {});
-            total.count = count;
+            total.data.count = count;
         }
 
           /* console.log(total);
                     {
-                        score: 2,
-                        category: ['Math', 'Science'],
-                        count: { Math: 1, Science: 1 }
+                        score: 7, // Contoh skor, jumlah jawaban benar
+                        data: {
+                                numberWrongs: {
+                                                    number: 5,
+                                                    idSoal: 789
+                                                }, // Contoh jawaban salah
+                                category: ['Math', 'Science', 'History',  ... dan seterusnya ], // Kategori soal yang dijawab salah
+                                count: {
+                                        Math: 2,
+                                        Science: 3,
+                                        History: 1,
+                                        // ... dan seterusnya
+                                    } // Contoh hitungan jawaban salah per kategori
+                            }
                     }
 
           */
@@ -492,4 +513,3 @@ exports.delete = async (req, res) => {
     }
   };
 
-  
