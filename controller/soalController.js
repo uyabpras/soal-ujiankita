@@ -1,4 +1,6 @@
 const db = require("../db/connect");
+const axiosInstance = require("../helper/axiosInstance");
+const kafkaProducer = require('../config/kafka');
 const SoalDB = db.soal;
 const Op = db.Sequelize.Op;
 
@@ -70,25 +72,38 @@ const Op = db.Sequelize.Op;
  *         description: error creating soal
  */
 exports.create = async(req, res) => {
-    try{
-        console.log(req.body.multiple1);
-            
+    try{ 
+        console.log(req.body.token);           
         const soal = {
-            mata_pelajaran: req.body.mata_pelajaran,
-            kategori: req.body.kategori,
-            deskripsi_soal1: req.body.deskripsi_soal1,
-            deskripsi_soal2: req.body.deskripsi_soal2||null,
-            multiple1: req.body.multiple1,
-            multiple2: req.body.multiple2,
-            multiple3: req.body.multiple3,
-            multiple4: req.body.multiple4,
-            multiple5: req.body.multiple5,
-            correct_answer: req.body.correct_answer,
-            description_answer: req.body.description_answer||null,
+            mata_pelajaran: req.body.data.mata_pelajaran,
+            kategori: req.body.data.kategori,
+            deskripsi_soal1: req.body.data.deskripsi_soal1,
+            deskripsi_soal2: req.body.data.deskripsi_soal2||null,
+            multiple1: req.body.data.multiple1,
+            multiple2: req.body.data.multiple2,
+            multiple3: req.body.data.multiple3,
+            multiple4: req.body.data.multiple4,
+            multiple5: req.body.data.multiple5,
+            correct_answer: req.body.data.correct_answer,
+            description_answer: req.body.data.description_answer||null,
         };
-        console.log(soal)
+        console.log(soal);
+        
 
         const newsoal = await SoalDB.create(soal)
+
+        const msg = {
+            userID: req.body.token.id,
+            service: 'soal',
+            typeTask: `soal ID: ${newsoal.id}`,
+            status: req.body.data.status,
+            data:{
+                soal: newsoal.id,
+                desc: 'create soal'
+            }
+        }
+        kafkaProducer.createTask(msg);
+
         res.status(201).json({
             success: true,  
             message: 'soal created succesfully', 
@@ -240,6 +255,7 @@ exports.list = async (req, res) => {
 
 exports.findID = async (req, res) => {
     try {
+        console.log(req.params);
         const findID = await SoalDB.findByPk(req.params.id);
         if (!findID) {
             res.status(404).send({ 
@@ -260,6 +276,39 @@ exports.findID = async (req, res) => {
     }
 };
 
+exports.getBulk = async (req, res) => {
+    try{
+        const result = await SoalDB.findAll({
+            where: {
+                id: {
+                    [Op.in]: req.body.id_soal,
+                }
+            }
+        });
+
+        const foundIds = result.map(item => item.id);
+        const notFoundIds = requestedIds.filter(id => !foundIds.includes(id));
+    
+        if (notFoundIds.length > 0) {
+          // Ada beberapa id yang tidak ditemukan
+          return res.status(404).send({
+            success: false,
+            data: null,
+            message: `IDs not found: ${notFoundIds.join(', ')}`
+          });
+        }
+
+        res.status(200).send({
+            success: true,
+            data: result,
+        });
+        
+    } catch (err) {
+        res.status(500).send({
+            message: err.message || "error getting soal"
+        });
+    }
+};
 
 /**
  * @swagger
@@ -362,6 +411,8 @@ exports.findID = async (req, res) => {
 
 exports.update = async (req, res) =>{
     try {
+        console.log(req.body);
+        console.log(req.query);
         const FindID = await SoalDB.findByPk(req.params.id);
 
         if (!FindID) {
@@ -392,13 +443,24 @@ exports.update = async (req, res) =>{
                 message: "update soal is failed by id:" + req.params.id
             });
         }
+        const msg = {
+            userID: req.body.token.id,
+            service: 'soal',
+            typeTask: `soal ID: ${updateSoal.id}`,
+            data:{
+                soal: updateSoal.id,
+                desc: req.body.comment || 'update soal'
+            }
+        }
+        kafkaProducer.updateTask(msg);
 
         res.status(200).send({
             success: true,
-            data: updatedSoal,
+            data: updateSoal,
             message: "successfully updated data by id:" + req.params.id
         });
     
+
 
     } catch (err) {
         res.status(500).send({
@@ -420,6 +482,16 @@ exports.delete = async (req, res) => {
         });
     }else{
         const result = await SoalDB.destroy({where: {id: req.params.id}})
+        const msg = {
+            userID: req.body.token.id,
+            service: 'soal',
+            typeTask: `soal ID: ${req.params.id}`,
+            data:{
+                soal: req.params.id,
+                desc: 'delete'
+            }
+        }
+        kafkaProducer.updateTask(msg);
         res.status(200).json({
           success: true,
           data: result,
@@ -437,7 +509,7 @@ exports.delete = async (req, res) => {
 
   exports.score = async (req, res) => {
     try {
-        const {answer} = req.body;
+        const answer = req.body.data.answer;
         /*
         const answer = [
                         { no_soal: 1, id_soal: 10, correct_answer: 'A' },
@@ -449,6 +521,7 @@ exports.delete = async (req, res) => {
          */
         
         const total = {
+            modulID: req.body.modulID,
             score: 0,
             data: {
                 numberWrongs: [],
@@ -457,11 +530,12 @@ exports.delete = async (req, res) => {
             }
             
         };
+        const multiplierScore = 100/answer.length;
 
         await Promise.all(answer.map(async (obj) => {
             const checksoal = await SoalDB.findByPk(obj.id_soal);
             if (checksoal.correct_answer === obj.correct_answer) {
-              total.score += 1;
+              total.score += multiplierScore;
             } else {
                 let numWrongs = {
                     number : obj.no_soal,
@@ -487,7 +561,7 @@ exports.delete = async (req, res) => {
                                                     number: 5,
                                                     idSoal: 789
                                                 }, // Contoh jawaban salah
-                                category: ['Math', 'Science', 'History',  ... dan seterusnya ], // Kategori soal yang dijawab salah
+                                category: ['Math',' Science', 'History',  ... dan seterusnya ], // Kategori soal yang dijawab salah
                                 count: {
                                         Math: 2,
                                         Science: 3,
@@ -498,7 +572,23 @@ exports.delete = async (req, res) => {
                     }
 
           */
-
+        
+        const msg = {
+            userID: req.body.token.id,
+            typeTask: `score modul ID: ${total.modulID}`,
+            data:{
+                modul: total.modulID,
+                score: total.score,
+                details: total.data,
+                desc: `score modul ID: ${total.modulID} with score: ${total.score}`
+            },
+            status: 'active'
+        }
+        kafkaProducer.createTask(msg);
+        // axiosInstance.post(`localhost: ${process.env.score_svc}`,{
+        //     userID: req.body.userID,
+        //     data: total
+        // })
         res.status(200).send({
             success: true,
             data: total,
@@ -513,3 +603,12 @@ exports.delete = async (req, res) => {
     }
   };
 
+exports.getHealth = async(req, res) => {
+    const data = {
+      uptime: process.uptime(),
+      message: 'Ok',
+      date: new Date()
+    }
+  
+    res.status(200).send(data);
+  }
